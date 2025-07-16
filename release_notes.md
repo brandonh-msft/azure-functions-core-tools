@@ -12,3 +12,4 @@
 - Chocolatey: Update default installation to x64 (#4506)
 - Add console output encoding to support international chars (#4429)
 - Add logs for host status checks during deployment of Flex Function Apps (#4525)
+- Fix exception when `AZURE_FUNCTIONS_ENVIRONMENT` variable is set by user (#2465)
