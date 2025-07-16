@@ -6,15 +6,23 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+
 using Azure.Functions.Cli.Actions.HostActions;
 using Azure.Functions.Cli.Common;
 using Azure.Functions.Cli.Helpers;
 using Azure.Functions.Cli.Interfaces;
+
 using Colors.Net;
+
 using FluentAssertions;
+using FluentAssertions.Execution;
+
 using Moq;
+
 using NSubstitute;
+
 using Xunit;
+
 using YamlDotNet.Core;
 
 namespace Azure.Functions.Cli.Tests.ActionsTests
@@ -245,6 +253,42 @@ namespace Azure.Functions.Cli.Tests.ActionsTests
             }
 
             Assert.False(expectException, "Expected validation failure.");
+        }
+
+        [InlineData(WorkerRuntime.DotnetIsolated, "default", true)]
+        [InlineData(WorkerRuntime.DotnetIsolated, "default", false)]
+        [InlineData(WorkerRuntime.Python, "default", false)]
+        [InlineData(WorkerRuntime.Java, "default", false)]
+        [InlineData(WorkerRuntime.Node, "default", false)]
+        [Theory]
+        public async Task AzureFunctionsEnvironment_EnvironmentVariable_SetByUser_DoesNotThrow(WorkerRuntime currentRuntime, string hostRuntimeArgument, bool validNet8Configuration)
+        {
+            Environment.SetEnvironmentVariable(Common.Constants.FunctionsWorkerRuntime, WorkerRuntimeLanguageHelper.GetRuntimeMoniker(currentRuntime));
+            GlobalCoreToolsSettings.SetWorkerRuntime(currentRuntime);
+
+            Mock<IProcessManager> processManager = new();
+            Mock<ISecretsManager> secretsManager = new();
+
+            var settings = new Dictionary<string, string> { ["AZURE_FUNCTIONS_ENVIRONMENT"] = "MyEnvironment" };
+            secretsManager.Setup(s => s.GetSecrets()).Returns(() => settings);
+
+            GlobalCoreToolsSettings.Init(secretsManager.Object, []);
+
+            var startHostAction = new StartHostAction(secretsManager.Object, processManager.Object)
+            {
+                HostRuntime = hostRuntimeArgument,
+                VerboseLogging = true,
+                //LanguageWorkerSetting = WorkerRuntimeLanguageHelper.GetRuntimeMoniker(currentRuntime),
+            };
+
+            try
+            {
+                await startHostAction.RunAsync().WaitAsync(TimeSpan.FromSeconds(1));
+                throw new AssertionFailedException("Should've canceled via timeout");
+            }
+            catch (TimeoutException) { }
+
+            Assert.Equal("MyEnvironment", settings["AZURE_FUNCTIONS_ENVIRONMENT"]);
         }
 
         public void Dispose()
