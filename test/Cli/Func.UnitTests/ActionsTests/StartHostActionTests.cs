@@ -21,7 +21,6 @@ using NSubstitute;
 
 using Xunit;
 
-
 namespace Azure.Functions.Cli.UnitTests.ActionsTests
 {
     public class StartHostActionTests : IDisposable
@@ -298,7 +297,9 @@ namespace Azure.Functions.Cli.UnitTests.ActionsTests
                 await startHostAction.RunAsync().WaitAsync(TimeSpan.FromSeconds(1));
                 throw new AssertionFailedException("Should've canceled via timeout");
             }
-            catch (TimeoutException) { }
+            catch (TimeoutException)
+            {
+            }
 
             Assert.Equal("MyEnvironment", settings["AZURE_FUNCTIONS_ENVIRONMENT"]);
         }
